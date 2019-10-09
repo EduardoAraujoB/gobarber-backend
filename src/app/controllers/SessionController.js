@@ -2,6 +2,7 @@ import jwt from 'jsonwebtoken';
 import * as Yup from 'yup';
 
 import authConfig from '../../config/auth';
+import File from '../models/File';
 import User from '../models/User';
 
 class SessionController {
@@ -16,15 +17,19 @@ class SessionController {
         error: 'Validation fails',
       });
     }
-    const {
-      email,
-      password,
-    } = req.body;
+    const { email, password } = req.body;
 
     const user = await User.findOne({
       where: {
         email,
       },
+      include: [
+        {
+          model: File,
+          as: 'avatar',
+          attributes: ['id', 'path', 'url'],
+        },
+      ],
     });
 
     if (!user) {
@@ -40,8 +45,7 @@ class SessionController {
     }
 
     const {
-      id,
-      name,
+      id, name, avatar, provider,
     } = user;
 
     return res.json({
@@ -49,12 +53,18 @@ class SessionController {
         id,
         name,
         email,
+        provider,
+        avatar,
       },
-      token: jwt.sign({
-        id,
-      }, authConfig.secret, {
-        expiresIn: authConfig.expiresIn,
-      }),
+      token: jwt.sign(
+        {
+          id,
+        },
+        authConfig.secret,
+        {
+          expiresIn: authConfig.expiresIn,
+        },
+      ),
     });
   }
 }
